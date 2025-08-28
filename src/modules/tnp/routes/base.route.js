@@ -29,7 +29,7 @@ const storage1 = new CloudinaryStorage({
   cloudinary: cloudinary.v2,
   params: {
     folder: "packages_images",
-    allowed_formats: ["jpg", "jpeg", "png", "gif","pdf"],
+    allowed_formats: ["jpg", "jpeg", "png", "gif","webp","pdf"],
   },
 });
 const parser = multer({ storage: storage1 });
