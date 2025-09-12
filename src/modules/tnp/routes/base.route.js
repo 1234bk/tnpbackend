@@ -35,6 +35,20 @@ const storage1 = new CloudinaryStorage({
 const parser = multer({ storage: storage1 });
 
 
+// const pdfStorage = new CloudinaryStorage({
+//   cloudinary: cloudinary.v2,
+//   params: {
+//     folder: "job_pdfs",
+//     resource_type: "raw", // important for PDF
+//     allowed_formats: ["pdf"],
+//   },
+// });
+
+// const pdfUpload = multer({ storage: pdfStorage });
+
+const storage = multer.memoryStorage();
+export const pdfUpload = multer({ storage });
+
 
 
 // get routes
@@ -46,7 +60,8 @@ router.get('/gettpomember' , gettpomember);
 
 
 // /api/posts
-router.post('/addpost', parser.single("jdFile"), createPost);        // POST /api/posts
+router.post('/addpost', pdfUpload.single('jdFile'), createPost);
+// router.post('/addpost',upload.single('jdFile'), createPost);        // POST /api/posts
 router.post("/addpackage" , parser.single("image"), addpackage);
 router.post("/company" , parser.single("image"), company);
 router.post("/addadmin"  , addadmin)

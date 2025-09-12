@@ -6,7 +6,7 @@ const postSchema = new mongoose.Schema({
     
   },
   dateOfDrive: {
-    type: String,
+    type: Date,
     
   },
   role: {

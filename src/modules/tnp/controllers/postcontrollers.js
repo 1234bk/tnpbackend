@@ -1,6 +1,7 @@
 import Post from "../models/posts.js";
 
 import { uploadToCloudinary } from "../../../utils/cloudinary.js"; // adjust path
+import cloudinary from "../config/cloudinary.js";
 // GET all posts
 
 export const getAllPosts = async (req, res) => {
@@ -27,10 +28,12 @@ export const getAllPosts = async (req, res) => {
 
 
 export const createPost = async (req, res) => {
-  try {
-    console.log("Incoming body:", req.body);
+
+  console.log("Incoming body:", req.body);
     console.log("Incoming file:", req.file);
 
+  try {
+    
     const {
       companyName,
       dateOfDrive,
@@ -45,35 +48,96 @@ export const createPost = async (req, res) => {
       return res.status(400).json({ error: "All required fields must be filled" });
     }
 
-    console.log("req.file : ",req.file)
-
     let jdLink = null;
-    if (req.file?.path) {
-      const cloudinaryRes = await uploadToCloudinary(req.file.path);
-      jdLink = cloudinaryRes?.secure_url || null;
+      if (req.file) {
+      // Upload PDF to Cloudinary (raw resource)
+      const result = await cloudinary.uploader.upload_stream(
+        {
+          resource_type: "raw",
+          folder: "job_pdfs",
+          public_id: `${Date.now()}_${req.file.originalname}`
+        },
+        async (error, result) => {
+          if (error) {
+            console.error("Cloudinary upload error:", error);
+            return res.status(500).json({ error: error.message });
+          }
+          jdLink = result.secure_url;
+
+          // Save post after PDF upload
+          const newPost = new Post({
+            companyName,
+            dateOfDrive,
+            role,
+            time,
+            venue,
+            description,
+            applyLink,
+            jdLink,
+          });
+          await newPost.save();
+          console.log("Post saved with PDF:", newPost);
+          return res.status(201).json({ message: "Post created successfully!", post: newPost });
+        }
+      );
+
+      // Send buffer to upload_stream
+      result.end(req.file.buffer);
+      return; // exit here, response will be sent in callback
+    } else {
+      // Save post without PDF
+      const newPost = new Post({ companyName, dateOfDrive, role, time, venue, description, applyLink });
+      await newPost.save();
+      console.log("Post saved without PDF:", newPost);
+      return res.status(201).json({ message: "Post created successfully!", post: newPost });
     }
-
-    const newPost = new Post({
-      companyName,
-      dateOfDrive,
-      role,
-      time,
-      venue,
-      description,
-      applyLink,
-      jdLink, // ✅ now Cloudinary PDF URL
-    });
-
-    await newPost.save();
-
-    res.status(201).json({
-      message: "Post created successfully with PDF",
-      post: newPost,
-    });
   } catch (error) {
-    console.error("Create post error:", error.message, error);
+    console.error("Create post error:", error);
     res.status(500).json({ error: error.message });
   }
+
+  //   if (req.file) {
+  //     // Upload PDF to Cloudinary as raw
+  //     const result = await cloudinary.uploader.upload_stream(
+  //       { resource_type: "raw", folder: "job_pdfs" },
+  //       (error, result) => {
+  //         if (error) throw error;
+  //         jdLink = result.secure_url;
+  //       }
+  //     );
+
+  //     // / Convert buffer to stream
+  //     const stream = cloudinary.uploader.upload_stream(
+  //       { resource_type: "raw", folder: "job_pdfs" },
+  //       (error, result) => {
+  //         if (error) return res.status(500).json({ error: error.message });
+  //         jdLink = result.secure_url;
+  //         savePost();
+  //       }
+  //     );
+
+  //     stream.end(req.file.buffer);
+  //     const savePost = async () => {
+  //       const newPost = new Post({ companyName, dateOfDrive, role, time, venue, description, applyLink, jdLink });
+  //       await newPost.save();
+  //       console.log("Saved Post:", newPost);
+  //       return res.status(201).json({ message: "Post created successfully!", post: newPost });
+  //     };
+
+  //     return; 
+  //     } else {
+  //     // If no PDF
+  //     const newPost = new Post({ companyName, dateOfDrive, role, time, venue, description, applyLink });
+  //     await newPost.save();
+  //     console.log("Saved Post without PDF:", newPost);
+  //     return res.status(201).json({ message: "Post created successfully!", post: newPost });
+  //   }
+
+
+  // } catch (error) {
+  //   console.error("Create post error:", error.message, error);
+  //   res.status(500).json({ error: error.message });
+  // }
 };
 
 export const deletepost = async (req, res) => {
